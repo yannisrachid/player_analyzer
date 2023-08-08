@@ -4,6 +4,7 @@ from mplsoccer import Radar, FontManager, grid
 import matplotlib.pyplot as plt
 import re
 import traceback
+from radar_chart import Radar
 
 # Display all columns of pandas DataFrames
 pd.set_option('display.max_columns', None)
@@ -109,20 +110,28 @@ def get_avg_stats_by_pos(df, pos, stats, percent):
     df_pos = df[(df["Pos"] == pos) & (df["Min"] >= 900)].reset_index(drop=True) #  & (df["Age"] <= 25)
     # print(round(df_pos['Min'].mean()), "average minutes played a player in league this season.")
     dict_player = {}
+    missing_stats = []
     for stat in stats:
         try:
             dict_player[stat] = [min(df_pos[stat]), df_pos[stat].median(), df[stat].quantile(1-(percent/100)), max(df_pos[stat]), df_pos.loc[df_pos[stat] == max(df_pos[stat]), 'Player'].iloc[0]]
         except:
             print(stat, "unavailable in the dataframe")
-    return dict_player
+            missing_stats.append(stat)
+    return dict_player, missing_stats
 
 def plot_radar(df, player, pos, stats, map_dict, player_name, percent):
     """
     """
+    avg_stats_val = get_avg_stats_by_pos(df, pos, stats, percent)
+    avg_stats = avg_stats_val[0]
+
+    for stat in stats:
+        if stat in avg_stats_val[1]:
+            stats.remove(stat)
+
     params = list(map(map_dict.get, stats))
     player_stats = get_player_stats(df, player, stats)
-    avg_stats = get_avg_stats_by_pos(df, pos, stats, percent)
-    
+
     # The lower and upper boundaries for the statistics
     low =  [val[0] for val in list(avg_stats.values())]
     top_5 = [val[2] for val in list(avg_stats.values())]
