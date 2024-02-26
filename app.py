@@ -10,6 +10,11 @@ def load_data(path_df):
     df.columns = pd.MultiIndex.from_tuples(new_columns)
     df = df.reset_index()
     df = df.sort_values(by=["league", "team", "player"])
+    try:
+        df['age'] = df['age'].apply(lambda x: x[:2])
+        df['age'] = df['age'].astype(float)
+    except TypeError:
+        print("Age column already in the right type")
     # df['age'] = df['age'].astype(float)
     return df
 
@@ -44,9 +49,9 @@ with col3:
     st.write(' ')
 
 st.sidebar.markdown("<h1 style='text-align: center; color: white;'>{}</h1>".format("Player radarplot by Yannis R"), unsafe_allow_html=True)
-st.sidebar.text("Data last updated on 02-20-23")
+st.sidebar.text("Data last updated on 02-20-24")
 
-compare_data = data
+compare_data = data.copy()
 
 league = st.sidebar.selectbox(
     'Select a league',
@@ -79,15 +84,24 @@ if compare_champ == league:
     # df = df[df["Comp"] == league].reset_index(drop=True)
 
 compare_percentile = st.sidebar.slider("Compare player with the top %", min_value=1, max_value=30, value=5)
-
 ages = st.sidebar.slider('Select an age group', 15, 45, (15, 45))
+minutes = st.sidebar.slider('Select a minimum number of minutes', min_value=90, max_value=1500, value=900)
+
 if ages:
     for type_data in all_types:
-        compare_data[type_data] = compare_data[type_data][(compare_data[type_data].age >= ages[0]) & (compare_data[type_data].age <= ages[1])].reset_index()
-    if player not in compare_data["standard"]["player"]:
+        compare_data[type_data]['age'] = compare_data[type_data]['age'].str.split('-').str[0].astype(float)
+        # compare_data[type_data]['age'] = compare_data[type_data]['age'].astype(float)
+        compare_data[type_data] = compare_data[type_data][(compare_data[type_data].age >= ages[0]) & (compare_data[type_data].age <= ages[1])]
+    
+    player_already_in_compare_data = any(player in compare_data[type_data]["player"].values for type_data in all_types)
+
+    if not player_already_in_compare_data:        
         st.sidebar.text("The chosen player is not included in this \nage category! We add him...")
         for type_data in all_types:
-            compare_data[type_data].loc[len(df)] = compare_data[type_data]
+            # Get the data for the selected player from the original dataset
+            player_data = data[type_data][data[type_data]["player"] == player]
+            # Append the player's data to the comparison dataset
+            compare_data[type_data] = compare_data[type_data].append(player_data, ignore_index=True)
     # df = df[(df.Age >= ages[0]) & (df.Age <= ages[1])].reset_index(drop=True)
     # if player not in df["Player"]:
     #     # st.sidebar.text("The chosen player is not included in this \nage category! We add him...")
@@ -95,12 +109,18 @@ if ages:
 
 
 pos_player = data["standard"]["pos"].values[0]
+
 # st.title(df_player["Player"].values[0])
 st.markdown("<h1 style='text-align: center; color: black;'>{}</h1>".format(data["standard"]["player"].values[0]), unsafe_allow_html=True)
 # st.dataframe(df_player)
+for type_data in all_types:
+    print(type_data)
+    st.pyplot(plot_radar(compare_data[type_data], data[type_data], pos_player, player, compare_percentile, False, type_data, minutes))
 
-st.pyplot(plot_radar(df, player, pos_player, standard_stats, name_mapping, player, compare_percentile))
-st.pyplot(plot_radar(df, player, pos_player, shooting_stats, name_mapping, player, compare_percentile))
-st.pyplot(plot_radar(df, player, pos_player, passing_stats, name_mapping, player, compare_percentile))
-st.pyplot(plot_radar(df, player, pos_player, creation_stats, name_mapping, player, compare_percentile))
-st.pyplot(plot_radar(df, player, pos_player, possession_stats, name_mapping, player, compare_percentile))
+# st.pyplot(plot_radar(compare_data["standard"], data["standard"], pos_player, player, compare_percentile, False))
+
+# st.pyplot(plot_radar(df, player, pos_player, standard_stats, name_mapping, player, compare_percentile))
+# st.pyplot(plot_radar(df, player, pos_player, shooting_stats, name_mapping, player, compare_percentile))
+# st.pyplot(plot_radar(df, player, pos_player, passing_stats, name_mapping, player, compare_percentile))
+# st.pyplot(plot_radar(df, player, pos_player, creation_stats, name_mapping, player, compare_percentile))
+# st.pyplot(plot_radar(df, player, pos_player, possession_stats, name_mapping, player, compare_percentile))

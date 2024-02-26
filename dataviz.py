@@ -63,43 +63,95 @@ name_mapping = {
     "Rec Poss": "Passes received"
 }
 
-standard_stats = ["Gls Std", "Ast Std", "G-PK.1 Std", "G+A-PK Std", 'PrgC Std', 'PrgP Std', 'PrgR Std']
-shooting_stats = ["Gls Std", "G-PK.1 Std", "Sh/90 St", "SoT/90 St", "G/Sh St", "G/SoT St", "Dist St", "G-xG St", "np:G-xG St"]
-passing_stats = ["Cmp Pass", "Att Pass", "Cmp% Pass", "PrgDist Pass", "Ast Std", "xAG Pass", "xA Pass", "KP Pass", "1/3 Pass", "PPA Pass", "CrsPA Pass", "PrgP Std"]
-creation_stats = ["SCA Gca", "SCA90 Gca", "PassLive Gca", "TO Gca", "Sh Gca", "GCA Gca", "GCA90 Gca"]
-possession_stats = ["Touches Poss", "Carries Poss", "PrgC Std", "CPA Poss", "Rec Poss", "PrgR Std"]
+# standard_stats = ["Gls Std", "Ast Std", "G-PK.1 Std", "G+A-PK Std", 'PrgC Std', 'PrgP Std', 'PrgR Std']
+# shooting_stats = ["Gls Std", "G-PK.1 Std", "Sh/90 St", "SoT/90 St", "G/Sh St", "G/SoT St", "Dist St", "G-xG St", "np:G-xG St"]
+# passing_stats = ["Cmp Pass", "Att Pass", "Cmp% Pass", "PrgDist Pass", "Ast Std", "xAG Pass", "xA Pass", "KP Pass", "1/3 Pass", "PPA Pass", "CrsPA Pass", "PrgP Std"]
+# creation_stats = ["SCA Gca", "SCA90 Gca", "PassLive Gca", "TO Gca", "Sh Gca", "GCA Gca", "GCA90 Gca"]
+# possession_stats = ["Touches Poss", "Carries Poss", "PrgC Std", "CPA Poss", "Rec Poss", "PrgR Std"]
 
-def get_player_stats(df, player, stats):
-    """
-    ============
-    Input: 
-        - df: pd.DataFrame
-        - player: string
-        - stats: list
-    ============
-    Output:
-        - dict_player: dict
-    ============
-    Slice the dataframe with player stats of the season, and returns a dict with all stats entered in input
-    ============
-    """
-    df_player = df[df["Player"] == player].reset_index(drop=True)
-    # print(player, "played", df_player.loc[0, 'Min'], "minutes in league this season.")
-    dict_player = {}
-    for stat in stats:
-        try:
-            dict_player[stat] = df_player.loc[0, stat]
-        except:
-            print(stat, "unavailable in the dataframe")
-    return dict_player
+def data_prep_compare_by_type(df, type_data, pos, minutes):
+    # df = df[(df["pos"] == pos) & (df["Playing Time"]["Min"] >= 900)]
+    per_match = minutes / 90
+    
+    if type_data == "standard":
+        df = df[(df["pos"] == pos) & (df["Playing Time"]["90s"] >= per_match)]
+        df = df[["player", "Performance", "Expected"]].droplevel(0, axis=1)
+        df = df.rename(columns={'': 'player'})
+        
+    elif type_data == "shooting":
+        df = df[(df["pos"] == pos) & (df["90s"] >= per_match)]
+        df = df[["player", "Standard", "Expected"]].droplevel(0, axis=1)
+        df = df.drop(columns=['Sh/90', 'SoT/90'])
+        df = df.rename(columns={'': 'player'})
+        
+    elif type_data == "passing":
+        df = df[(df["pos"] == pos) & (df["90s"] >= per_match)]
+        selected_columns = ["player", "Total", "Short", "Medium", "Long", "Ast", "xAG", "Expected", "KP", "1/3", "PPA", "CrsPA", "PrgP"]
+        df = df[selected_columns]
+        prefixes = df.columns.get_level_values(0)
+        df.columns = prefixes + '_' + df.columns.get_level_values(1)
+        df.columns = [col_name.split("_")[0] if col_name.split("_")[1] == "" else col_name for col_name in df.columns]
+        
+    elif type_data == "goal_shot_creation":
+        df = df[(df["pos"] == pos) & (df["90s"] >= per_match)]
+        selected_columns = ["player", "SCA", "SCA Types", "GCA", "GCA Types"]
+        df = df[selected_columns]
+        prefixes = df.columns.get_level_values(0)
+        df.columns = prefixes + '_' + df.columns.get_level_values(1)
+        df.columns = [col_name.split("_")[1] if col_name.split("_")[0] in ["SCA", "GCA"] else col_name.replace(" Types", "") for col_name in df.columns]
+        df = df.drop(columns=['SCA90', 'GCA90'])
+        df = df.rename(columns={'player_': 'player'})
+        
+    elif type_data == "possession":
+        df = df[(df["pos"] == pos) & (df["90s"] >= per_match)]
+        df = df[["player", "Touches", "Take-Ons", "Carries", "Receiving"]].droplevel(0, axis=1)
+        df = df.rename(columns={'': 'player'})
+        
+    return df
 
-def get_avg_stats_by_pos(df, pos, stats, percent):
+
+def data_prep_player_by_type(df, type_data):
+    # df = df[(df["pos"] == pos) & (df["Playing Time"]["Min"] >= 900)]
+    
+    if type_data == "standard":
+        df = df[["player", "Performance", "Expected"]].droplevel(0, axis=1)
+        df = df.rename(columns={'': 'player'})
+        
+    elif type_data == "shooting":
+        df = df[["player", "Standard", "Expected"]].droplevel(0, axis=1)
+        df = df.drop(columns=['Sh/90', 'SoT/90'])
+        df = df.rename(columns={'': 'player'})
+        
+    elif type_data == "passing":
+        selected_columns = ["player", "Total", "Short", "Medium", "Long", "Ast", "xAG", "Expected", "KP", "1/3", "PPA", "CrsPA", "PrgP"]
+        df = df[selected_columns]
+        prefixes = df.columns.get_level_values(0)
+        df.columns = prefixes + '_' + df.columns.get_level_values(1)
+        df.columns = [col_name.split("_")[0] if col_name.split("_")[1] == "" else col_name for col_name in df.columns]
+        
+    elif type_data == "goal_shot_creation":
+        selected_columns = ["player", "SCA", "SCA Types", "GCA", "GCA Types"]
+        df = df[selected_columns]
+        prefixes = df.columns.get_level_values(0)
+        df.columns = prefixes + '_' + df.columns.get_level_values(1)
+        df.columns = [col_name.split("_")[1] if col_name.split("_")[0] in ["SCA", "GCA"] else col_name.replace(" Types", "") for col_name in df.columns]
+        df = df.drop(columns=['SCA90', 'GCA90'])
+        df = df.rename(columns={'player_': 'player'})
+        
+    elif type_data == "possession":
+        df = df[["player", "Touches", "Take-Ons", "Carries", "Receiving"]].droplevel(0, axis=1)
+        df = df.rename(columns={'': 'player'})
+        
+    return df
+
+def get_avg_stats_by_pos(df, type_data, pos, percent, minutes, per90):
     """
     ============
     Input: 
         - df: pd.DataFrame
         - pos: string
-        - stats: list
+        - percent: int
+        - per90: bool
     ============
     Output:
         - dict_player: dict
@@ -107,30 +159,50 @@ def get_avg_stats_by_pos(df, pos, stats, percent):
     Slice the dataframe with all players stats by position of the season, and returns a dict with all avg stats entered in input
     ============
     """
-    df_pos = df[(df["Pos"] == pos) & (df["Min"] >= 900)].reset_index(drop=True) #  & (df["Age"] <= 25)
+    # df_pos = df[(df["Pos"] == pos) & (df["Min"] >= 900)].reset_index(drop=True) #  & (df["Age"] <= 25)
     # print(round(df_pos['Min'].mean()), "average minutes played a player in league this season.")
+    df_pos = data_prep_compare_by_type(df, type_data, pos, minutes)
+    stats = list(df_pos.columns)
+    if "player" in stats:
+        stats.remove("player")
     dict_player = {}
-    missing_stats = []
     for stat in stats:
-        try:
-            dict_player[stat] = [min(df_pos[stat]), df_pos[stat].median(), df[stat].quantile(1-(percent/100)), max(df_pos[stat]), df_pos.loc[df_pos[stat] == max(df_pos[stat]), 'Player'].iloc[0]]
-        except:
-            print(stat, "unavailable in the dataframe")
-            missing_stats.append(stat)
-    return dict_player, missing_stats
+        dict_player[stat] = [min(df_pos[stat]), df_pos[stat].median(), df_pos[stat].quantile(1-(percent/100)), max(df_pos[stat]), df_pos.loc[df_pos[stat] == max(df_pos[stat]), 'player'].iloc[0]]
+    return dict_player
 
-def plot_radar(df, player, pos, stats, map_dict, player_name, percent):
+def get_player_stats(df, type_data, per90):
+    """
+    ============
+    Input: 
+        - df: pd.DataFrame
+        - per90: bool
+    ============
+    Output:
+        - dict_player: dict
+    ============
+    Slice the dataframe with player stats of the season, and returns a dict with all stats entered in input
+    ============
+    """
+    df = data_prep_player_by_type(df, type_data).reset_index()
+    # print(player, "played", df_player.loc[0, 'Min'], "minutes in league this season.")
+    stats = list(df.columns)
+    if "index" in stats:
+        stats.remove("index")
+    if "player" in stats:
+        stats.remove("player")
+    dict_player = {}
+    for stat in stats:
+        dict_player[stat] = df.loc[0, stat]
+    return dict_player
+
+def plot_radar(df, df_player, pos, player_name, percent, per90, type_data, minutes):
     """
     """
-    avg_stats_val = get_avg_stats_by_pos(df, pos, stats, percent)
-    avg_stats = avg_stats_val[0]
+    avg_stats = get_avg_stats_by_pos(df, type_data, pos, percent, minutes, per90)
+    stats = list(avg_stats.keys())
 
-    for stat in stats:
-        if stat in avg_stats_val[1]:
-            stats.remove(stat)
-
-    params = list(map(map_dict.get, stats))
-    player_stats = get_player_stats(df, player, stats)
+    params = stats
+    player_stats = get_player_stats(df_player, type_data, per90)
 
     # The lower and upper boundaries for the statistics
     low =  [val[0] for val in list(avg_stats.values())]
@@ -176,11 +248,21 @@ def plot_radar(df, player, pos, stats, map_dict, player_name, percent):
                                                        'lw': 3})
 
     # radar1, radar2, radar3, vertices1, vertices2, vertices3 = radar_output
+
+    if len(params) > 15:
+        labels_size = 12
+    else:
+        labels_size = 25
+
+    if len(params) > 18:
+        param_labels_size = 16
+    else:
+        param_labels_size = 25
     
-    range_labels = radar.draw_range_labels(ax=axs['radar'], fontsize=25,
+    range_labels = radar.draw_range_labels(ax=axs['radar'], fontsize=labels_size,
                                            fontproperties=robotto_bold.prop, color="black")
 
-    param_labels = radar.draw_param_labels(ax=axs['radar'], fontsize=25,
+    param_labels = radar.draw_param_labels(ax=axs['radar'], fontsize=param_labels_size,
                                            fontproperties=robotto_bold.prop, color="black")
     
     max_labels = radar.draw_under_param_labels(text_list=high_name, ax=axs['radar'], fontsize=12,
@@ -200,9 +282,9 @@ def plot_radar(df, player, pos, stats, map_dict, player_name, percent):
     
     stack = traceback.extract_stack()
     filename, lineno, function_name, code = stack[-2]
-    vars_name = re.compile(r'\((.*?)\).*$').search(code).groups()[0].replace(' ', '').split(',')
+    # vars_name = re.compile(r'\((.*?)\).*$').search(code).groups()[0].replace(' ', '').split(',')
 
-    title_axs = axs['title'].text(0.50, 0.65, vars_name[3].replace('_', ' ').title(), fontsize=35, color='black',
+    title_axs = axs['title'].text(0.50, 0.65, "{} Stats".format(type_data).replace("_", " ").title(), fontsize=35, color='black',
                                     fontproperties=robotto_bold.prop, ha='center', va='center')
     
     leader = axs["radar"].text(-7, -4, "Leader", fontsize=25, color='#FF5D00',
