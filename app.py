@@ -16,9 +16,10 @@ def load_data(path_df):
     except TypeError:
         print("Age column already in the right type")
     # df['age'] = df['age'].astype(float)
+    df = df[df["pos"] != "GK"]
     return df
 
-all_types = ["standard", "shooting", "passing", "goal_shot_creation", "possession"]
+all_types = ["standard", "shooting", "passing", "goal_shot_creation", "possession", "misc", "defense"]
 data = {}
 for type_data in all_types:
     data[type_data] = load_data("data/{}_player_season_stats.csv".format(type_data))
@@ -87,6 +88,8 @@ compare_percentile = st.sidebar.slider("Compare player with the top %", min_valu
 ages = st.sidebar.slider('Select an age group', 15, 45, (15, 45))
 minutes = st.sidebar.slider('Select a minimum number of minutes', min_value=90, max_value=1500, value=900)
 
+per_90 = st.sidebar.checkbox("Aggregate per game", value=False)
+
 if ages:
     for type_data in all_types:
         compare_data[type_data]['age'] = compare_data[type_data]['age'].str.split('-').str[0].astype(float)
@@ -112,9 +115,9 @@ pos_player = data["standard"]["pos"].values[0]
 
 # st.title(df_player["Player"].values[0])
 st.markdown("<h1 style='text-align: center; color: black;'>{}</h1>".format(data["standard"]["player"].values[0]), unsafe_allow_html=True)
+
 # st.dataframe(df_player)
 for type_data in all_types:
-    print(type_data)
     st.pyplot(plot_radar(compare_data[type_data], data[type_data], pos_player, player, compare_percentile, False, type_data, minutes))
 
 # st.pyplot(plot_radar(compare_data["standard"], data["standard"], pos_player, player, compare_percentile, False))

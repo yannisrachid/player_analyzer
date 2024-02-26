@@ -106,6 +106,24 @@ def data_prep_compare_by_type(df, type_data, pos, minutes):
         df = df[(df["pos"] == pos) & (df["90s"] >= per_match)]
         df = df[["player", "Touches", "Take-Ons", "Carries", "Receiving"]].droplevel(0, axis=1)
         df = df.rename(columns={'': 'player'})
+
+    elif type_data == "misc":
+        df = df[(df["pos"] == pos) & (df["90s"] >= per_match)]
+        selected_columns = ["player", "Performance", "Aerial Duels"]
+        df = df[selected_columns]
+        prefixes = df.columns.get_level_values(0)
+        df.columns = prefixes + '_' + df.columns.get_level_values(1)
+        df.columns = [col_name.split("_")[1] if col_name.split("_")[0] == "Performance" else col_name.replace("_", " ") for col_name in df.columns]
+        df = df.rename(columns={'player ': 'player'})
+
+    elif type_data == "defense":
+        df = df[(df["pos"] == pos) & (df["90s"] >= per_match)]
+        selected_columns = ["player", "Tackles", "Challenges", "Blocks", "Int", "Tkl+Int", "Clr", "Err"]
+        df = df[selected_columns]
+        prefixes = df.columns.get_level_values(0)
+        df.columns = prefixes + '_' + df.columns.get_level_values(1)
+        df.columns = [col_name.split("_")[0] if col_name.split("_")[1] == "" else col_name for col_name in df.columns]
+        df.columns = [col_name.split("_")[1] if (col_name.split("_")[0] != "Challenges" and "_" in col_name) else col_name.replace("_", " ") for col_name in df.columns]
         
     return df
 
@@ -141,7 +159,23 @@ def data_prep_player_by_type(df, type_data):
     elif type_data == "possession":
         df = df[["player", "Touches", "Take-Ons", "Carries", "Receiving"]].droplevel(0, axis=1)
         df = df.rename(columns={'': 'player'})
-        
+
+    elif type_data == "misc":
+        selected_columns = ["player", "Performance", "Aerial Duels"]
+        df = df[selected_columns]
+        prefixes = df.columns.get_level_values(0)
+        df.columns = prefixes + '_' + df.columns.get_level_values(1)
+        df.columns = [col_name.split("_")[1] if col_name.split("_")[0] == "Performance" else col_name.replace("_", " ") for col_name in df.columns]
+        df = df.rename(columns={'player ': 'player'})
+
+    elif type_data == "defense":
+        selected_columns = ["player", "Tackles", "Challenges", "Blocks", "Int", "Tkl+Int", "Clr", "Err"]
+        df = df[selected_columns]
+        prefixes = df.columns.get_level_values(0)
+        df.columns = prefixes + '_' + df.columns.get_level_values(1)
+        df.columns = [col_name.split("_")[0] if col_name.split("_")[1] == "" else col_name for col_name in df.columns]
+        df.columns = [col_name.split("_")[1] if (col_name.split("_")[0] != "Challenges" and "_" in col_name) else col_name.replace("_", " ") for col_name in df.columns]
+
     return df
 
 def get_avg_stats_by_pos(df, type_data, pos, percent, minutes, per90):
@@ -251,12 +285,9 @@ def plot_radar(df, df_player, pos, player_name, percent, per90, type_data, minut
 
     if len(params) > 15:
         labels_size = 12
-    else:
-        labels_size = 25
-
-    if len(params) > 18:
         param_labels_size = 16
     else:
+        labels_size = 25
         param_labels_size = 25
     
     range_labels = radar.draw_range_labels(ax=axs['radar'], fontsize=labels_size,
@@ -297,6 +328,13 @@ def plot_radar(df, df_player, pos, player_name, percent, per90, type_data, minut
     median = axs['radar'].text(-7, -5.5, 'Median', fontsize=25,
                                     fontproperties=robotto_bold.prop,
                                     ha='left', va='center', color='#66d8ba')
+    
+    signing = axs['radar'].text(-0.75, 0, '@Yannis R', fontsize=20,
+                                    fontproperties=robotto_bold.prop,
+                                    ha='left', va='center', color='#DEDEDE')
+    data_source = axs['radar'].text(5, -5.5, 'Data: FBRef', fontsize=20,
+                                    fontproperties=robotto_bold.prop,
+                                    ha='left', va='center', color='#000000')
 
     fig.set_facecolor('#F2F2F0')
     
