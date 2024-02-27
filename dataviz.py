@@ -69,24 +69,25 @@ name_mapping = {
 # creation_stats = ["SCA Gca", "SCA90 Gca", "PassLive Gca", "TO Gca", "Sh Gca", "GCA Gca", "GCA90 Gca"]
 # possession_stats = ["Touches Poss", "Carries Poss", "PrgC Std", "CPA Poss", "Rec Poss", "PrgR Std"]
 
-def data_prep_compare_by_type(df, type_data, pos, minutes):
+def data_prep_compare_by_type(df, type_data, pos, minutes, per90):
     # df = df[(df["pos"] == pos) & (df["Playing Time"]["Min"] >= 900)]
     per_match = minutes / 90
     
     if type_data == "standard":
         df = df[(df["pos"] == pos) & (df["Playing Time"]["90s"] >= per_match)]
-        df = df[["player", "Performance", "Expected"]].droplevel(0, axis=1)
+        df = df[["player", "Playing Time", "Performance", "Expected"]].droplevel(0, axis=1)
         df = df.rename(columns={'': 'player'})
+        df = df.drop(columns=['MP', 'Starts', "Min"])
         
     elif type_data == "shooting":
         df = df[(df["pos"] == pos) & (df["90s"] >= per_match)]
-        df = df[["player", "Standard", "Expected"]].droplevel(0, axis=1)
+        df = df[["player", "90s", "Standard", "Expected"]].droplevel(0, axis=1)
         df = df.drop(columns=['Sh/90', 'SoT/90'])
-        df = df.rename(columns={'': 'player'})
+        df.columns = ["player", "90s"] + df.columns[2:].tolist()
         
     elif type_data == "passing":
         df = df[(df["pos"] == pos) & (df["90s"] >= per_match)]
-        selected_columns = ["player", "Total", "Short", "Medium", "Long", "Ast", "xAG", "Expected", "KP", "1/3", "PPA", "CrsPA", "PrgP"]
+        selected_columns = ["player", "90s", "Total", "Short", "Medium", "Long", "Ast", "xAG", "Expected", "KP", "1/3", "PPA", "CrsPA", "PrgP"]
         df = df[selected_columns]
         prefixes = df.columns.get_level_values(0)
         df.columns = prefixes + '_' + df.columns.get_level_values(1)
@@ -94,88 +95,107 @@ def data_prep_compare_by_type(df, type_data, pos, minutes):
         
     elif type_data == "goal_shot_creation":
         df = df[(df["pos"] == pos) & (df["90s"] >= per_match)]
-        selected_columns = ["player", "SCA", "SCA Types", "GCA", "GCA Types"]
+        selected_columns = ["player", "90s", "SCA", "SCA Types", "GCA", "GCA Types"]
         df = df[selected_columns]
         prefixes = df.columns.get_level_values(0)
         df.columns = prefixes + '_' + df.columns.get_level_values(1)
         df.columns = [col_name.split("_")[1] if col_name.split("_")[0] in ["SCA", "GCA"] else col_name.replace(" Types", "") for col_name in df.columns]
         df = df.drop(columns=['SCA90', 'GCA90'])
-        df = df.rename(columns={'player_': 'player'})
+        df = df.rename(columns={'player_': 'player', '90s_': '90s'})
         
     elif type_data == "possession":
         df = df[(df["pos"] == pos) & (df["90s"] >= per_match)]
-        df = df[["player", "Touches", "Take-Ons", "Carries", "Receiving"]].droplevel(0, axis=1)
-        df = df.rename(columns={'': 'player'})
-
+        df = df[["player", "90s", "Touches", "Take-Ons", "Carries", "Receiving"]].droplevel(0, axis=1)
+        df.columns = ["player", "90s"] + df.columns[2:].tolist()
+        
     elif type_data == "misc":
         df = df[(df["pos"] == pos) & (df["90s"] >= per_match)]
-        selected_columns = ["player", "Performance", "Aerial Duels"]
+        selected_columns = ["player", "90s", "Performance", "Aerial Duels"]
         df = df[selected_columns]
         prefixes = df.columns.get_level_values(0)
         df.columns = prefixes + '_' + df.columns.get_level_values(1)
         df.columns = [col_name.split("_")[1] if col_name.split("_")[0] == "Performance" else col_name.replace("_", " ") for col_name in df.columns]
-        df = df.rename(columns={'player ': 'player'})
-
+        df = df.rename(columns={'player ': 'player', '90s ': '90s'})
+        df = df.drop(columns=["OG", "PKcon", "2CrdY"])
+        
     elif type_data == "defense":
         df = df[(df["pos"] == pos) & (df["90s"] >= per_match)]
-        selected_columns = ["player", "Tackles", "Challenges", "Blocks", "Int", "Tkl+Int", "Clr", "Err"]
+        selected_columns = ["player", "90s", "Tackles", "Challenges", "Blocks", "Int", "Tkl+Int", "Clr", "Err"]
         df = df[selected_columns]
         prefixes = df.columns.get_level_values(0)
         df.columns = prefixes + '_' + df.columns.get_level_values(1)
         df.columns = [col_name.split("_")[0] if col_name.split("_")[1] == "" else col_name for col_name in df.columns]
         df.columns = [col_name.split("_")[1] if (col_name.split("_")[0] != "Challenges" and "_" in col_name) else col_name.replace("_", " ") for col_name in df.columns]
+    
+    if per90:
+        filtered_columns = [col for col in df.columns if ('%' not in col) and ('/' not in col or col == '1/3')]
+        df = df[filtered_columns]
+        for col in df.columns[2:].tolist():
+            df[col] = df[col] / df["90s"]
+            
+    df = df.drop(columns=["90s"])
         
     return df
 
 
-def data_prep_player_by_type(df, type_data):
+def data_prep_player_by_type(df, type_data, per90):
     # df = df[(df["pos"] == pos) & (df["Playing Time"]["Min"] >= 900)]
     
     if type_data == "standard":
-        df = df[["player", "Performance", "Expected"]].droplevel(0, axis=1)
+        df = df[["player", "Playing Time", "Performance", "Expected"]].droplevel(0, axis=1)
         df = df.rename(columns={'': 'player'})
+        df = df.drop(columns=['MP', 'Starts', "Min"])
         
     elif type_data == "shooting":
-        df = df[["player", "Standard", "Expected"]].droplevel(0, axis=1)
+        df = df[["player", "90s", "Standard", "Expected"]].droplevel(0, axis=1)
         df = df.drop(columns=['Sh/90', 'SoT/90'])
-        df = df.rename(columns={'': 'player'})
+        df.columns = ["player", "90s"] + df.columns[2:].tolist()
         
     elif type_data == "passing":
-        selected_columns = ["player", "Total", "Short", "Medium", "Long", "Ast", "xAG", "Expected", "KP", "1/3", "PPA", "CrsPA", "PrgP"]
+        selected_columns = ["player", "90s", "Total", "Short", "Medium", "Long", "Ast", "xAG", "Expected", "KP", "1/3", "PPA", "CrsPA", "PrgP"]
         df = df[selected_columns]
         prefixes = df.columns.get_level_values(0)
         df.columns = prefixes + '_' + df.columns.get_level_values(1)
         df.columns = [col_name.split("_")[0] if col_name.split("_")[1] == "" else col_name for col_name in df.columns]
         
     elif type_data == "goal_shot_creation":
-        selected_columns = ["player", "SCA", "SCA Types", "GCA", "GCA Types"]
+        selected_columns = ["player", "90s", "SCA", "SCA Types", "GCA", "GCA Types"]
         df = df[selected_columns]
         prefixes = df.columns.get_level_values(0)
         df.columns = prefixes + '_' + df.columns.get_level_values(1)
         df.columns = [col_name.split("_")[1] if col_name.split("_")[0] in ["SCA", "GCA"] else col_name.replace(" Types", "") for col_name in df.columns]
         df = df.drop(columns=['SCA90', 'GCA90'])
-        df = df.rename(columns={'player_': 'player'})
+        df = df.rename(columns={'player_': 'player', '90s_': '90s'})
         
     elif type_data == "possession":
-        df = df[["player", "Touches", "Take-Ons", "Carries", "Receiving"]].droplevel(0, axis=1)
-        df = df.rename(columns={'': 'player'})
-
+        df = df[["player", "90s", "Touches", "Take-Ons", "Carries", "Receiving"]].droplevel(0, axis=1)
+        df.columns = ["player", "90s"] + df.columns[2:].tolist()
+        
     elif type_data == "misc":
-        selected_columns = ["player", "Performance", "Aerial Duels"]
+        selected_columns = ["player", "90s", "Performance", "Aerial Duels"]
         df = df[selected_columns]
         prefixes = df.columns.get_level_values(0)
         df.columns = prefixes + '_' + df.columns.get_level_values(1)
         df.columns = [col_name.split("_")[1] if col_name.split("_")[0] == "Performance" else col_name.replace("_", " ") for col_name in df.columns]
-        df = df.rename(columns={'player ': 'player'})
-
+        df = df.rename(columns={'player ': 'player', '90s ': '90s'})
+        df = df.drop(columns=["OG", "PKcon", "2CrdY"])
+        
     elif type_data == "defense":
-        selected_columns = ["player", "Tackles", "Challenges", "Blocks", "Int", "Tkl+Int", "Clr", "Err"]
+        selected_columns = ["player", "90s", "Tackles", "Challenges", "Blocks", "Int", "Tkl+Int", "Clr", "Err"]
         df = df[selected_columns]
         prefixes = df.columns.get_level_values(0)
         df.columns = prefixes + '_' + df.columns.get_level_values(1)
         df.columns = [col_name.split("_")[0] if col_name.split("_")[1] == "" else col_name for col_name in df.columns]
         df.columns = [col_name.split("_")[1] if (col_name.split("_")[0] != "Challenges" and "_" in col_name) else col_name.replace("_", " ") for col_name in df.columns]
-
+    
+    if per90:
+        filtered_columns = [col for col in df.columns if ('%' not in col) and ('/' not in col or col == '1/3')]
+        df = df[filtered_columns]
+        for col in df.columns[2:].tolist():
+            df[col] = df[col] / df["90s"]
+            
+    df = df.drop(columns=["90s"])
+    
     return df
 
 def get_avg_stats_by_pos(df, type_data, pos, percent, minutes, per90):
@@ -195,7 +215,7 @@ def get_avg_stats_by_pos(df, type_data, pos, percent, minutes, per90):
     """
     # df_pos = df[(df["Pos"] == pos) & (df["Min"] >= 900)].reset_index(drop=True) #  & (df["Age"] <= 25)
     # print(round(df_pos['Min'].mean()), "average minutes played a player in league this season.")
-    df_pos = data_prep_compare_by_type(df, type_data, pos, minutes)
+    df_pos = data_prep_compare_by_type(df, type_data, pos, minutes, per90)
     stats = list(df_pos.columns)
     if "player" in stats:
         stats.remove("player")
@@ -217,7 +237,7 @@ def get_player_stats(df, type_data, per90):
     Slice the dataframe with player stats of the season, and returns a dict with all stats entered in input
     ============
     """
-    df = data_prep_player_by_type(df, type_data).reset_index()
+    df = data_prep_player_by_type(df, type_data, per90).reset_index()
     # print(player, "played", df_player.loc[0, 'Min'], "minutes in league this season.")
     stats = list(df.columns)
     if "index" in stats:

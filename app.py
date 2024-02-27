@@ -77,18 +77,24 @@ for type_data in all_types:
     data[type_data] = data[type_data][data[type_data]["player"] == player] #.reset_index()
 
 # df_player = df_club[df_club["Player"] == player].reset_index(drop=True)
+    
+compare_champ = st.sidebar.multiselect("Compare with", compare_data["standard"]["league"].unique(), default = compare_data["standard"]["league"].unique())
+if len(compare_champ) == 0:
+    st.sidebar.error("Please select at least one competition.")
+for type_data in all_types:
+    compare_data[type_data] = compare_data[type_data][compare_data[type_data]["league"].isin(compare_champ)].reset_index()
 
-compare_champ = st.sidebar.radio("Compare with", (league, 'Big 5 Leagues'))
-if compare_champ == league:
-    for type_data in all_types:
-        compare_data[type_data] = compare_data[type_data][compare_data[type_data]["league"] == league].reset_index()
+# compare_champ = st.sidebar.radio("Compare with", (league, 'Big 5 Leagues'))
+# if compare_champ == league:
+    # for type_data in all_types:
+        # compare_data[type_data] = compare_data[type_data][compare_data[type_data]["league"] == league].reset_index()
     # df = df[df["Comp"] == league].reset_index(drop=True)
 
 compare_percentile = st.sidebar.slider("Compare player with the top %", min_value=1, max_value=30, value=5)
 ages = st.sidebar.slider('Select an age group', 15, 45, (15, 45))
 minutes = st.sidebar.slider('Select a minimum number of minutes', min_value=90, max_value=1500, value=900)
 
-per_90 = st.sidebar.checkbox("Aggregate per game", value=False)
+per_90 = st.sidebar.checkbox("Aggregate per 90", value=False)
 
 if ages:
     for type_data in all_types:
@@ -99,7 +105,7 @@ if ages:
     player_already_in_compare_data = any(player in compare_data[type_data]["player"].values for type_data in all_types)
 
     if not player_already_in_compare_data:        
-        st.sidebar.text("The chosen player is not included in this \nage category! We add him...")
+        st.sidebar.text("The chosen player is not included in this \selected filtering! We add him...")
         for type_data in all_types:
             # Get the data for the selected player from the original dataset
             player_data = data[type_data][data[type_data]["player"] == player]
@@ -118,7 +124,7 @@ st.markdown("<h1 style='text-align: center; color: black;'>{}</h1>".format(data[
 
 # st.dataframe(df_player)
 for type_data in all_types:
-    st.pyplot(plot_radar(compare_data[type_data], data[type_data], pos_player, player, compare_percentile, False, type_data, minutes))
+    st.pyplot(plot_radar(compare_data[type_data], data[type_data], pos_player, player, compare_percentile, per_90, type_data, minutes))
 
 # st.pyplot(plot_radar(compare_data["standard"], data["standard"], pos_player, player, compare_percentile, False))
 
