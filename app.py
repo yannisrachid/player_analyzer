@@ -1,5 +1,4 @@
 import streamlit as st
-from streamlit_extras.buy_me_a_coffee import button
 from dataviz import *
 
 st.markdown("<h3 style='text-align: left; color: black;'>For any contact or support:</h3>", unsafe_allow_html=True)
@@ -8,7 +7,7 @@ col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
 with col1:
     st.markdown("[![My LinkedIn profile](https://content.linkedin.com/content/dam/me/business/en-us/amp/brand-site/v2/bg/LI-Bug.svg.original.svg)](https://www.linkedin.com/in/yannis-rachid-230/)")
 with col2:
-    button(username="yannisr", floating=False, width=221)
+    st.markdown('<a href="https://www.buymeacoffee.com/yannisr" target="_blank"><img src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=&slug=votrepseudo&button_colour=FFDD00&font_colour=000000&font_family=Cookie&outline_colour=000000&coffee_colour=ffffff"></a>', unsafe_allow_html=True)
 
 @st.cache_data
 def load_data(path_df):
