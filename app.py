@@ -82,10 +82,10 @@ if ages:
     player_already_in_compare_data = any(player in compare_data[type_data]["player"].values for type_data in all_types)
 
     if not player_already_in_compare_data:        
-        st.sidebar.text("The chosen player is not included in this \selected filtering! We add him...")
+        st.sidebar.text("The chosen player is not included in\nthis selected filtering! We add him...")
         for type_data in all_types:
             player_data = data[type_data][data[type_data]["player"] == player]
-            compare_data[type_data] = compare_data[type_data].append(player_data, ignore_index=True)
+            compare_data[type_data] = pd.concat([compare_data[type_data], player_data], ignore_index=True)
 
 pos_player = data["standard"]["pos"].values[0]
 
