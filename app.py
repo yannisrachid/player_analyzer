@@ -38,7 +38,7 @@ with col3:
     st.write(' ')
 
 st.sidebar.markdown("<h1 style='text-align: center; color: white;'>{}</h1>".format("Player analyzer by Yannis R"), unsafe_allow_html=True)
-st.sidebar.text("Data last updated on 02-20-2024")
+st.sidebar.text("Data last updated on 02-28-2024")
 
 compare_data = data.copy()
 
