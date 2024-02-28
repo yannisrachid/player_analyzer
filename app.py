@@ -1,5 +1,6 @@
 import streamlit as st
 from dataviz import *
+from data_description import table_data
 
 st.markdown("<h3 style='text-align: left; color: black;'>For any contact or support:</h3>", unsafe_allow_html=True)
 
@@ -93,3 +94,5 @@ st.markdown("<h1 style='text-align: center; color: black;'>{}</h1>".format(data[
 
 for type_data in all_types:
     st.pyplot(plot_radar(compare_data[type_data], data[type_data], pos_player, player, compare_percentile, per_90, type_data, minutes))
+
+st.write(table_data, unsafe_allow_html=True)
